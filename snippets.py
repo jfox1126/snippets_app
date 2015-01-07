@@ -3,12 +3,11 @@ import logging
 import argparse
 import sys
 
+#Set the log output file, and the log level
+logging.basicConfig(filename="snippets.log", level=logging.DEBUG)
 logging.debug("Connecting to PostgreSQL")
 connection = psycopg2.connect("dbname='snippets' user='action' host='localhost'")
 logging.debug("Database connection established.")
-
-#Set the log output file, and the log level
-logging.basicConfig(filename="snippets.log", level=logging.DEBUG)
 
 def put(name, snippet):
   """Store a snippet with an associated name."""
@@ -30,15 +29,15 @@ def get(name):
   logging.debug("Snippet retrieved successfully.")
   return message[0]
 
-def update(name, snippet):
+#def update(name, snippet):
   """Update an existing snippet"""
-  logging.error("FIXME: Unimplemented - update({!r}, {!r})".format(name, snippet))
-  return name, snippet
+  #logging.error("FIXME: Unimplemented - update({!r}, {!r})".format(name, snippet))
+  #return name, snippet
 
-def delete(name):
+#def delete(name):
   """Delete an existing snippet"""
-  logging.error("FIXME: Unimplemented - delete({!r})".format(name))
-  return ""
+  #logging.error("FIXME: Unimplemented - delete({!r})".format(name))
+  #return ""
 
 def main():
   """Main function"""
