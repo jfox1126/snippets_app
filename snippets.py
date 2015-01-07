@@ -21,34 +21,24 @@ def put(name, snippet):
   return name, snippet
 
 def get(name):
-  """Retrieve the snippet with a given name.
-
-  If there is no such snippet, returns false
-
-  Returns the snippet.
-  """
+  """Retrieve the snippet with a given name."""
   logging.error("FIXME: Unimplemented - get({!r})".format(name))
-  return ""
+  cursor = connection.cursor()
+  command = "select message from snippets where keyword='{}'".format(name)
+  cursor.execute(command)
+  message = cursor.fetchone()
+  logging.debug("Snippet retrieved successfully.")
+  return message[0]
 
 def update(name, snippet):
-  """
-  Update an existing snippet
-  
-  Returns the name and the new value of the snippet
-  """
+  """Update an existing snippet"""
   logging.error("FIXME: Unimplemented - update({!r}, {!r})".format(name, snippet))
   return name, snippet
 
 def delete(name):
-  """
-  Delete an existing snippet
-  
-  Confirms that a snippet was deleted
-  """
+  """Delete an existing snippet"""
   logging.error("FIXME: Unimplemented - delete({!r})".format(name))
   return ""
-
-
 
 def main():
   """Main function"""
