@@ -11,33 +11,60 @@ logging.debug("Database connection established.")
 
 def put(name, snippet):
   """Store a snippet with an associated name."""
-  logging.error("FIXME: Unimplemented - put({!r}, {!r})".format(name, snippet))
   cursor = connection.cursor()
-  command = "insert into snippets values (%s, %s)"
-  cursor.execute(command, (name, snippet))
-  connection.commit()
+  with connection, connection.cursor() as cursor:
+    try: 
+      command = "insert into snippets values (%s, %s)"
+      cursor.execute(command, (name, snippet))
+    except psycopg2.IntegrityError as e:
+      connection.rollback()
+      command = "update snippets set message=%s where keyword=%s"
+      cursor.execute(command, (snippet, name))
   logging.debug("Snippet stored successfully.")
   return name, snippet
 
 def get(name):
   """Retrieve the snippet with a given name."""
-  logging.error("FIXME: Unimplemented - get({!r})".format(name))
-  cursor = connection.cursor()
-  command = "select message from snippets where keyword='{}'".format(name)
-  cursor.execute(command)
-  message = cursor.fetchone()
+  command = "select message from snippets where keyword=%s"
+  with connection, connection.cursor() as cursor:
+    cursor.execute(command, (name,))
+    message = cursor.fetchone()
+  if not message:
+    logging.error("No snippet: " + name)
+    print "No '" + name + "' in the database"
+    sys.exit()
   logging.debug("Snippet retrieved successfully.")
   return message[0]
 
-#def update(name, snippet):
+def update(name, snippet):
   """Update an existing snippet"""
-  #logging.error("FIXME: Unimplemented - update({!r}, {!r})".format(name, snippet))
-  #return name, snippet
+  command = "update snippets set message=%s where keyword=%s"
+  with connection, connection.cursor() as cursor:
+    cursor.execute(command, (snippet, name))
+    connection.commit()
+  return name, snippet
 
-#def delete(name):
+def delete(name):
   """Delete an existing snippet"""
-  #logging.error("FIXME: Unimplemented - delete({!r})".format(name))
-  #return ""
+  command = "delete from snippets where keyword=%s"
+  with connection, connection.cursor() as cursor:
+    cursor.execute(command, (name,))
+    connection.commit()
+  return name
+
+def catalog():
+  """Return a list of all keywords"""
+  with connection, connection.cursor() as cursor:
+    cursor.execute("select * from snippets order by keyword")
+    keywords = cursor.fetchall()
+  return keywords
+
+def search(string):
+  """Search for a snippet containing a specific string"""
+  with connection, connection.cursor() as cursor:
+    cursor.execute("select * from snippets where message like '%{}%'".format(string))
+    match = cursor.fetchall()
+  return match
 
 def main():
   """Main function"""
@@ -57,17 +84,60 @@ def main():
   get_parser = subparsers.add_parser("get", help="Retrieve a snippet")
   get_parser.add_argument("name", help="The name of the snippet to retrieve")
   
+  # Subparser for update
+  logging.debug("Constructing update subparser")
+  update_parser = subparsers.add_parser("update", help="Update a snippet")
+  update_parser.add_argument("name", help="The name of the snippet")
+  update_parser.add_argument("snippet", help="The snippet text")
+  
+  # Subparser for delete
+  logging.debug("Constructing delete subparser")
+  delete_parser = subparsers.add_parser("delete", help="Delete a snippet")
+  delete_parser.add_argument("name", help="The name of the snippet")
+  
+  # Subparser for catalog()
+  logging.debug("Constructing catalog subparser")
+  catalog_subparser = subparsers.add_parser("catalog", help="Returns full database")
+  
+  # Subparser for delete
+  logging.debug("Constructing search subparser")
+  delete_parser = subparsers.add_parser("search", help="Search for a string within a snippet")
+  delete_parser.add_argument("string", help="The string to search for")
+  
   arguments = parser.parse_args(sys.argv[1:])
   # Convert parsed arguments from Namespace to dictionary
   arguments = vars(arguments)
-  command = arguments.pop("command")
-  
+  command = arguments.pop("command") #could use arguments.get(command) instead. What's the value of pop()?
+
   if command == "put":
-    name, snippet = put(**arguments)
+    name = arguments.get("name")
+    snippet = arguments.get("snippet")
+    name, snippet = put(name, snippet) #why can't I just run put(name, snippet)?
     print("Stored {!r} as {!r}".format(snippet, name))
   elif command == "get":
-    snippet = get(**arguments)
-    print("Retrieved snippet: {!r}".format(snippet))
+    name = arguments.get("name")
+    name = get(name) 
+    print("Retrieved snippet: {!r}".format(name))
+  elif command == "update":
+    name = arguments.get("name")
+    snippet = arguments.get("snippet")
+    name, snippet = update(name, snippet)
+    print("Stored {!r} as {!r}".format(snippet, name))
+  elif command == "delete":
+    name = arguments.get("name")
+    name = delete(name)
+    print("Deleted {!r}".format(name))
+  elif command == "catalog":
+    keywords = catalog()
+    print("This table has the following snippets:")
+    for x in keywords:
+      print x[0] + ": " + x[1]
+  elif command == "search":
+    string = arguments.get("string")
+    match = search(string)
+    print("The following snippets contain {!r}:".format(string))
+    for x in match:
+      print x[0] + ": " + x[1]
 
 if __name__=="__main__":
   main()
